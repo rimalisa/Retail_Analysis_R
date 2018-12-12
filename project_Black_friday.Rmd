@@ -1,0 +1,657 @@
+---
+title: "Black Friday"
+subtitle: "A Retail Store Analysis"
+author: "Rim Issaad"
+date: "October 28, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+  pdf_document: default
+  word_document: default
+---
+
+========================================================
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE} 
+
+knitr::opts_chunk$set(fig.width=9,fig.height=5,fig.path='Figs/',
+                      fig.align='center',tidy=TRUE,
+                      echo= FALSE,warning=FALSE,message=FALSE)
+
+library(ggplot2)
+library(gridExtra)
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(polycor)
+library(memisc)
+library(scales)
+library(MASS)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Load_the_Data}
+# Load the Data
+df = read.csv('BlackFriday.csv')
+# lowercase all the variables
+names(df) <- tolower(names(df))
+head(df)
+```
+
+> Dataset of 537 577 observations about the transactions made on black Friday in a retail store
+
+# Univariate Plots Section
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+dim(df)
+```
+ the dataset contain 537577 observations and 12 variables
+
+
+# the structure of the dataset
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+str(df)
+```
+# preliminary summary of the data set
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(df)
+
+```
+
+# Number of unique customers 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# how many unique user do we have in the data set
+length(unique(df$user_id))
+
+```
+ let's use some plots to represent the data
+
+
+ this Table represents the main Dataset grouped by user_id 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# creating a new data set where we regroup everything by userID and sum the purchases
+df.new <- aggregate(df$purchase ~ df$user_id, df, sum)
+by_userid <- df %>%
+  group_by(user_id, gender, age, occupation, city_category,  stay_in_current_city_years, marital_status) %>%
+  summarise(
+    total_purchases = sum(purchase)
+  )
+head(by_userid)
+
+```
+
+# summary of the data set grouped by userID
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(by_userid)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# histogram of all the purchases 
+ggplot( data= df, aes(purchase ))+
+  geom_histogram(stat = "bin", binwidth = 500) +
+  labs( title='All Purchases') 
+```
+
+ The Purchase plot shows a relatively symmetrical distribution with a peak around $7000.I notice some gaps at different purchase levels  
+
+
+
+
+# Let's explore the discrete variables
+```{r echo=FALSE, message=FALSE, warning=FALSE,Univariate_Plots}
+
+# plotting of 3 variables: gender, city_category, and age 
+p1 <- ggplot( data= by_userid, aes(gender))+
+  geom_bar()+
+  labs( title='Gender proportion') 
+p2<-ggplot( data= by_userid, aes(city_category))+
+  geom_bar()+
+  labs( title='City category proportion') 
+p3 <- ggplot( data= by_userid , aes(age))+
+  geom_bar()+
+  labs( title='Age') 
+grid.arrange(p1,p2, p3)
+
+
+```
+
+ we have more male than female customers 
+ the city category C is the one with the most customers 
+ the 26-35 year old range is the hignest among the customers 
+
+
+
+
+# Marital status 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# plotting of the marital status always by userID
+ggplot( data= by_userid, aes(marital_status))+
+  geom_bar(show.legend = T)+
+  labs( title='Marital Status') 
+```
+
+the Number of non married customers is higher than the married ones
+
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# plotting of total_purchases by userID
+ggplot( data= by_userid, aes(total_purchases))+
+  geom_histogram(stat = "bin", binwidth = 100000) +
+  labs( title='Purchases grouped by user_id') 
+```
+
+ Most users made purchases less than $5million, but we notice some outliers that made purchases over 7.5 and 10 million
+
+# Total purchases by gender
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of total purchases groued by gender 
+by_gender <- df %>%
+  group_by(gender) %>%
+  summarise(
+    total_purchases = sum(as.numeric(purchase))
+  )
+head(by_gender)
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# creation of a data set where the data is grouped by product ID
+
+by_productid <- df %>%
+  group_by(product_id, product_category_1,
+    product_category_2,
+    product_category_3) %>%
+  summarise(
+    sum_purchases = sum(purchase)
+  )
+# plotting of the total purchases by product ID
+ggplot(by_productid,aes(sum_purchases))+
+  geom_histogram( binwidth = 100000)+
+  ggtitle("Total Purchases per product ID")+
+  scale_x_continuous(limits=c(0,10000000))
+```
+
+Some products are more popular than others 
+
+
+
+# Univariate Analysis
+
+
+
+### What is the structure of your dataset?
+The data set used has 537577 observations and 12 variables. Each user (which is a customer of the store) is represented by a user_id, age, gender, occupatio, city_category, stay_in_current_city_years, marital_status, and for each transaction we have the product_id, the product_category(A,B,C), and the purchases.
+
+we notice that the most users are from the city category C, but most purchases are from the city category B.
+
+Most users made purchases less than $5 million, but we notice some users (outliers) that made purchases over 7.5 and 10 million dollars
+
+the number of Male shoppers is higher than female shoppers
+the number of non married shoppers is higner than married shoppers 
+
+
+
+
+### What is/are the main feature(s) of interest in your dataset?
+the dataset can help us predict what profile of users will spend more and on which category of article. The combination of the variables( age, gender,and occupation)  can help us with that
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest?
+marital status, city, time spent in the city and the occupation are other feature that should be explored to help with main interest of the dataset exploration
+
+### Did you create any new variables from existing variables in the dataset?
+no new variables was created.
+
+### Of the features you investigated, were there any unusual distributions? \Did you perform any operations on the data to tidy, adjust, or change the form \of the data? If so, why did you do this?
+I grouped the users by user_id in order to study the users and their features get the proportion of users and the total purchases per user
+
+
+# Bivariate Plots Section
+
+
+
+## Relationship between the age and the total purchases 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of the total purchases by age 
+ggplot( by_userid, aes(age, total_purchases))+
+  geom_boxplot(alpha= 0.3)+
+  ggtitle("Total Purchases by age")
+```
+
+The 26-35 age bracket is the one with the highest amount of purchases. The 0-17 and 55+ are the one with the smallest amount of purchases. we can also notice some outliers, but in general the median amount of purchases is the same among all age brackets 
+
+
+
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, plot_total_per_gender}
+# plotting of total purchases by gender
+ggplot( by_userid, aes(gender, total_purchases))+
+  geom_boxplot(alpha= 0.3)+
+  ggtitle("Total purchases by gender")
+```
+
+The difference in  total purchases between male and female is not very significant, but we notice much more extremely high purchases among male than female
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of the total purchases by city category
+ggplot( by_userid, aes(city_category, total_purchases))+
+  geom_boxplot(alpha= 0.2)+
+  ggtitle("Total purchases for each city")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#plotting of the total purchases by city category
+ggplot(by_userid, aes(city_category, total_purchases))+
+  geom_col()+
+  ggtitle(" Total Purchases by city category")
+```
+
+ City C has the lowest level of purchases, it's median is the lowest among the 3 cities. In city A and city B about 75% of the purchases were about the same amount, but city A has a  lot more outliers with very high total purchases.The second plot shows that city B has the highest total amount of purchases and city A has the lowest 
+
+
+## Relationship between the occupation and the total purchases
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of total purchases by occupation 
+ggplot( by_userid, aes(occupation, total_purchases))+
+  geom_col()+
+  scale_x_continuous( breaks = (0:20))+
+  ggtitle(" Total Purchases by occupation")
+```
+
+ Occupations up to category 7 have made the most purchases
+
+
+# relationship between the marital status and the total purchases
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of total purchases by marital status 
+ggplot( by_userid, aes(marital_status, total_purchases))+
+  geom_col()+
+  scale_x_discrete(limits = c(0,1))
+```
+
+ Non married customers made much more purchases than married customers
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# plotting of marital status Vs gender 
+ggplot( by_userid, aes(marital_status, gender))+
+  geom_count()+
+  scale_x_discrete(limits = c(0,1))+
+  ggtitle(" Count of marital status by gender")
+```
+
+There are more single male than female, and also more married male than female. it might explain why male made more purchases than female, usually singles can afford to spend more than married customers, but it's worth more exploration
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of Age Vs Occupation 
+ggplot(by_userid, aes(age, occupation))+
+  geom_count()+
+  ggtitle("Age Vs Occupation")
+```
+
+ The 26-35 and 36_45 are the busiest brackets, the hold occupation from all categories 
+
+
+ let's explore the relationship between the age and the city_category
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# number of customer by age in each city category
+tbl = table(by_userid$age, by_userid$city_category)
+tbl
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# chi test to evaluate the correlation between 2 discrete variables age and city_category
+chisq.test(tbl)
+```
+
+The p_value of the Pearson's Chi_squared test is very small ( < 0.05), so there is clearely a relationship between the age and the city_category. 
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of age by city category 
+ggplot(by_userid, aes(age, city_category))+
+  geom_count()+
+  ggtitle("Age by City category ")
+```
+
+ The city A has a population mainly between 18 and 45 years old. 
+
+
+ let's explore the relationship between the age and the stay_in_current_city
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# count of age age and stay incurrent city years 
+tbl1 = table(by_userid$age, by_userid$stay_in_current_city_years)
+tbl1
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# chi test to evaluate the correlation between 2 discrete variables age and stay_in_current_city_years
+chisq.test(tbl1)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of age vs stay_in_current_city_years
+ggplot(by_userid, aes(age, stay_in_current_city_years))+
+  geom_count()+
+  ggtitle(" Age by Number of years in the same city")
+```
+
+ Contrary to my expectation, there is not a strong relationship between the age and the number of year the person stayed in the same city. 
+
+
+
+
+ now, let's explore more about the products bought
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# new dataset from the main one grouped by product Id
+by_productid <- df %>% 
+  group_by(product_id, product_category_1,product_category_2, product_category_3, age, gender, city_category, marital_status) %>%
+  summarise(
+    total_purchases = sum(purchase),
+      nbre_purchases = n())
+head(by_productid)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(by_productid)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#  scatterplot of the number of purchases by product ID
+ggplot(by_productid, aes(product_id, nbre_purchases))+
+  geom_point(alpha =0.3)+
+  scale_x_discrete(breaks = levels(by_productid$product_id)[c(T, rep(F, 100))]) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size=7))+
+  ggtitle("Number of purchases by product ID")
+```
+
+ Most products were bought less than 192 times, and very few were bought more than 1500 times
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# total of purchases by product ID
+ggplot(by_productid, aes(product_id, total_purchases))+
+  geom_point(alpha =0.3)+
+  scale_y_continuous(labels=comma)+
+  ggtitle( "total of purchases by product ID")+
+  scale_x_discrete(breaks = levels(by_productid$product_id)[c(T, rep(F, 100))]) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size=7))
+```
+
+Most of the purchases per product are under $2.5 million
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots}
+# plotting of number of purchases by age 
+ggplot( data = by_productid, aes( x=age, y=nbre_purchases))+
+  geom_col()+
+  ggtitle("number of purchases by age ")
+```
+
+The age bracket 26_35 is the one with the biggest number of purchases
+
+
+```{r echo=FALSE,, message=FALSE, warning=FALSE}
+#plotting of correlation between the total purchases and the nuber of purchases
+ggplot( data = by_productid, aes( x=(total_purchases), y=nbre_purchases))+
+  geom_point(alpha = 0.3, position = "jitter")+
+  ggtitle("correlation between total_purchases and the nbre_purchases")
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# correlation coefficient between total purchases and number of purchases
+cor(by_productid$total_purchases, by_productid$nbre_purchases)
+```
+
+
+There is a strong correlation between numbre of purchases and the amount spend
+
+
+
+# Bivariate Analysis
+
+
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the dataset?
+I noticed that there are more buyers from city C, but the amount of purchases is higher in city B, this is worth exploring deeper.
+I also noticed that occupations up to category 7 have made the most purchases, I will explore more the relationship with the other variables.
+
+
+### Did you observe any interesting relationships between the other features \
+(not the main feature(s) of interest)?
+
+I was expecting older people to stay longer in the same city, the data doesn't show that. we also have more young customers in every city. 
+
+### What was the strongest relationship you found?
+in each city the number of customers of age bracket: 26-35 year old is highest than the other brackets, it is also the bracket with the highest purchases, it is worth exploring if any other varibale is correlated to them
+
+
+# Multivariate Plots Section
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of occupation and total purchases colored by age 
+ggplot( data = by_userid, aes( x=occupation, y=total_purchases))+
+  geom_line(aes(color = age), stat = 'summary', fun.y=median)+
+  scale_x_continuous(breaks = 0:20)+
+  ggtitle("total purchases by occupation and age ")
+```
+
+ Customers in occupation 8 and between 46 and 50 year old are the ones who made the mots purchases
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#plotting of total purchases by gender colored by age 
+ggplot( data = by_userid, aes( x=gender, y=total_purchases))+
+  geom_col(aes(color = age, fill=age))+
+  ggtitle(" total purchases by gender and age")
+  
+```
+
+ Male in general made more purchases than female and particularly male in the 26-35 year old bracket. 
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of total purchases by age colored by city category
+ggplot( data = by_userid, aes( x=age , y=total_purchases))+
+  geom_col(aes(color = city_category, fill=city_category))+
+  ggtitle("Total purchases by age and city category ")
+```
+
+ The 26-35 bracket is the one with the most purchases through the 3 cities, but particulariliy in city B and then A 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#plotting the total purchases by occupation and colored by city category
+ggplot( data = by_userid, aes( x=occupation , y=total_purchases))+
+  geom_col(aes(color = city_category, fill=city_category))+
+  scale_x_continuous(breaks = 0:20)
+```
+
+ 3 main occupations(0,4) with very high purchases
+
+ Now, let's see if single male made more purchases
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# plotting total purchases by marital status and colored by gender 
+ggplot( data = by_userid, aes( x=marital_status , y=total_purchases))+
+  geom_col(aes(color = gender, fill=gender))+
+  ggtitle("total purchases by marital status and gender ")
+                     
+```
+
+ The data shows that single male made more purchases 
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting total purchases by occupation, colored by city category and faceted by age
+ggplot( data = by_userid, aes( x=occupation , y=total_purchases))+
+  geom_col(aes(color = city_category, fill=city_category))+
+  scale_x_continuous(breaks = 0:20)+
+  facet_wrap(~age)
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#total purchases by occupation, colored by city category and faceted by gender
+ggplot( data = by_userid, aes( x=occupation , y=total_purchases))+
+  geom_col(aes(color = city_category, fill=city_category))+
+  scale_x_continuous(breaks = 0:20)+
+  scale_y_continuous("Total Purchases ($)", labels = comma) +
+  xlab("Occupations") +
+  ggtitle("Total Purchases and Occupations by Gender")+
+  facet_wrap(~gender)
+```
+
+ The last 2 plots show that male between 26 and 35 year old accross all three cities and occupation are the customers with the most purcahses
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of number of purchases by age and colored by total purchases
+ggplot( data = by_productid, aes( x=age, y=nbre_purchases))+
+  geom_line(aes(color = total_purchases), size = 7)
+```
+
+ This plot shows that the 26-35 age bracket made the biggest number of purchases with high amounts spending 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# plotting of the correlation between the total purchases and the number of purchases by userID and colored by age 
+ggplot( data = by_productid, aes( x=total_purchases, y=nbre_purchases))+
+  geom_point(aes(color = age))
+```
+
+
+# linear model
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# creation of a linear model and adding variables progressively to check if they can be used to predict the purchases
+m1 <- lm( total_purchases ~ nbre_purchases, by_productid)
+m2 <- update(m1, ~ .+ age )
+m3 <- update(m2, ~ .+ gender )
+m4 <- update(m3, ~ . +city_category)
+m5 <- update (m4, ~ . +marital_status)
+mtable(m1,m2, m3, m4, m5)
+```
+
+ I created the linear model, and the R-squared is significant. This model can be used to predict the amount spent and the number of purchases by customer. The variables used account for 82.6% in the total purchases of a customer 
+
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \investigation. Were there features that strengthened each other in terms of \looking at your feature(s) of interest?
+single male have the hignest amount of purchases. the 26-35 year old customers from all city categories have the hights amount of purchases. and the number of product bought was correlated to the amount spent. 
+
+
+### Were there any interesting or surprising interactions between features?
+there was no big suprises in this part of the investigation. but I was surrise that the variable occupation didn't have that a big influence on the rest of the variables.  
+
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the \strengths and limitations of your model.
+the linear model I created  shows that the variables : age, gender, city_category, and marital status are very important in the prediction of the amount spent.
+It would have been very nice if I was able to predict the product id of the product that the customer would buy using the variables. 
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One, message=FALSE, warning=FALSE}
+# plotting of the amount of purchases grouped by userID
+ggplot( data= by_userid, aes(total_purchases))+
+  geom_histogram(stat = "bin", binwidth = 100000) +
+  labs( title='Purchases grouped by user_id') +
+  xlab("Purchases ($)")
+```
+
+
+
+### Description One
+the plot shows the purchases made by each customer, the plot is skewed to the left, which shows that the bulk of the amounts spent is less than 2.5 million dollar. it also shows that there was some extremely high amount spent, they represent the outliers of this analysis
+
+### Plot Two
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
+# correlation between the total purchase and the number of purchases 
+ggplot( data = by_productid, aes( x=total_purchases, y=nbre_purchases))+
+  geom_point(alpha = 0.1, position = "jitter")+
+  scale_fill_brewer(palette = 4)+
+  xlab("Total Purchases in $")+
+  ylab("Number of purchases")
+```
+
+### Description Two
+I like the fact that there is a correlation between the number of purchases and the amount spent, it shows that customers were buying a lot of products and not necessarily very expensive one. it can be an indiaction that there is not a lot of outliers
+
+### Plot Three
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
+#plotting the total purchases by occupation colored by city catgeory and faceted by age
+ggplot( data = by_userid, aes( x=occupation , y=total_purchases))+
+  geom_col(aes(color = city_category, fill=city_category))+
+  scale_y_continuous("Total Purchases ($)", labels = comma) +
+  xlab("Occupations") +
+  ggtitle("Total Purchases and Occupations by Age")+
+  facet_wrap(~age)
+```
+
+```{r}
+# plotting the total purchases by occupation colored by city catgeory and faceted by gender
+ggplot( data = by_userid, aes( x=occupation , y=total_purchases))+
+  geom_col(aes(color = city_category, fill=city_category))+
+  scale_x_continuous(breaks = 0:20)+
+  scale_y_continuous("Total Purchases ($)", labels = comma) +
+  xlab("Occupations") +
+  ggtitle("Total Purchases and Occupations by Gender")+
+  facet_wrap(~gender)
+```
+
+### Description Three
+these 2 plots show that the purchases were made mainly by the 26-35 year old male  , and this accross the 3 cities. some occupation were mode frequent than others, but doens't really have a big influence on the amount of purhases. We can notice that cities A and B are the ones with the most purcahses. 
+so these 2 plots resume it all and tell us what variables influenced the purchases.
+------
+
+# Reflection
+it was very interesting to explore this dataset, the good part is that there was no cleaning to make on it. I am a big shopper so I enjoyed working on this particular dataset because I always wonder how big retail stores manage and use their data to explore their customers and their shopping habits. 
+the difficult part was to find the right functions in R for a particular little action on a plot. we learn a lot in the classes, we absorb a lot of new information but it is very difficult to remember all of them and to find the right one to use when needed. I guess a lot practice is always needed to learn a new language.
+overall, I enjoyed working on this project! I wish I have more time to explore this data set further, and to explore the other side of it, which is what are the most popular products. it can be a good future project for when I finish my Nano degree.
+
+
+
+
+
+
+
